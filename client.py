@@ -6,8 +6,9 @@ HEADER = 64
 PORT = 5050
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.56.1"  
+SERVER = "127.0.0.1"  
 ADDR = (SERVER, PORT)
+
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
@@ -52,7 +53,7 @@ def send_batch(data_list):
         introduce_error = random.choice([True, False])  
         send_packet(data, introduce_error=introduce_error)
         time.sleep(0.5)  
-
+    
 
 send_batch(["Mensagem1", "Mensagem2", "Mensagem3", "Mensagem4", "Mensagem5"])
 

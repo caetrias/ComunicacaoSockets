@@ -25,32 +25,29 @@ def handle_client(conn, addr):
     connected = True
 
     while connected:
-        try:
-            msg_length = conn.recv(HEADER).decode(FORMAT)
-            if msg_length:
-                msg_length = int(msg_length)
-                packet = conn.recv(msg_length).decode(FORMAT)
-                seq_num, data, received_checksum = packet.split('|')
-                seq_num = int(seq_num)
-                received_checksum = int(received_checksum)
+        packet = conn.recv(1024).decode(FORMAT)
+        if packet:
+            # Processa o pacote recebido
+                #tipo_mensagem vai ser a variavel para tratar o menu
+            seq_num, data, tipo_mensagem, received_checksum = packet.split('|')
+            seq_num = int(seq_num)
+            received_checksum = int(received_checksum)
 
-                
-                if checksum(data) == received_checksum:
-                    print(f"[{addr}] Pacote {seq_num} recebido com sucesso.")
-                    conn.send(f"ACK|{seq_num}".encode(FORMAT))
-                else:
-                    print(f"[{addr}] Erro de integridade no pacote {seq_num}.")
-                    conn.send(f"NAK|{seq_num}".encode(FORMAT))
+            # Verifica a integridade do pacote
+            if checksum(data) == received_checksum:
+                print(f"[{addr}] Pacote {seq_num} recebido com sucesso. Mensagem: {data}")
+                conn.send(f"ACK|{seq_num}".encode(FORMAT))
+            else:
+                print(f"[{addr}] Erro de integridade no pacote {seq_num}.")
+                conn.send(f"NAK|{seq_num}".encode(FORMAT))
 
-                if len(window) < WINDOW_SIZE:
-                    window.append(seq_num)
-                else:
-                    print("Janela cheia, aguardando espaço.")
+            # Adiciona o pacote à janela
+            if len(window) < WINDOW_SIZE:
+                window.append(seq_num)
+            else:
+                print("Janela cheia, aguardando espaço.")
 
-                time.sleep(0.1)
-        except socket.timeout:
-            print(f"[{addr}] Tempo de espera excedido para o pacote {seq_num}.")
-            conn.send(f"NAK|{seq_num}".encode(FORMAT))
+            time.sleep(0.1)
 
     conn.close()
 
@@ -59,11 +56,9 @@ def start():
     print(f"[LISTENING] Server is listening on {SERVER}")
     while True:
         conn, addr = server.accept()
-        conn.settimeout(TIMEOUT)
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
         print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
 
 print("[STARTING] Server is starting...")
 start()
-

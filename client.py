@@ -28,11 +28,12 @@ def send_packet(data, introduce_error=False):
 
     packet = f"{seq_num}|{data}|{packet_checksum}"
     message = packet.encode(FORMAT)
-    msg_length = len(message)
-    send_length = str(msg_length).encode(FORMAT)
-    send_length += b' ' * (HEADER - len(send_length))
+    #msg_length = len(message)
+    #send_length = str(msg_length).encode(FORMAT)
+    #print(f'tamanho: {send_length}')
+    #send_length += b' ' * (HEADER - len(send_length))
 
-    client.send(send_length)
+    #client.send(send_length)
     client.send(message)
     print(f"[CLIENT] Pacote {seq_num} enviado: {data}")
 

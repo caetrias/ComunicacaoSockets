@@ -55,7 +55,32 @@ def send_batch(data_list):
         time.sleep(0.5)  
     
 
-send_batch(["Mensagem1", "Mensagem2", "Mensagem3", "Mensagem4", "Mensagem5"])
+def menu():
+    while True:
+        print("\nMenu:")
+        print("1. Enviar uma única mensagem")
+        print("2. Enviar várias mensagens em lote")
+        print("3. Enviar uma mensagem com erro")
+        print("4. Sair")
 
-send_packet(DISCONNECT_MESSAGE)
-client.close()
+        choice = input("Escolha uma opção: ")
+
+        if choice == '1':
+            message = input("Digite a mensagem para enviar: ")
+            send_packet(message)
+        elif choice == '2':
+            num_messages = int(input("Quantas mensagens deseja enviar? "))
+            messages = [f"Mensagem {i+1}" for i in range(num_messages)]
+            send_batch(messages)
+        elif choice == '3':
+            message = input("Digite a mensagem para enviar com erro: ")
+            send_packet(message, introduce_error=True)
+        elif choice == '4':
+            send_packet(DISCONNECT_MESSAGE)
+            print("[CLIENT] Desconectando...")
+            client.close()
+            break
+        else:
+            print("Opção inválida. Tente novamente.")
+
+menu()

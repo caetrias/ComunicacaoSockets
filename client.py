@@ -1,87 +1,119 @@
 import socket
-import random
 import time
+import asyncio
 
 HEADER = 64
 PORT = 5050
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "127.0.0.1"  
+SERVER = "127.0.0.1"
 ADDR = (SERVER, PORT)
 
+seq_num = 0  # Sequência de pacotes enviada
+congestion_window = 1  # Janela de congestionamento inicial (1 pacote)
+max_cwnd = 10  # Tamanho máximo da janela de congestionamento
+receiver_window = 5  # Tamanho da janela de recepção do servidor (simulado)
+ack_received = set()  # Conjunto para armazenar ACKs recebidos
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(ADDR)
 
-seq_num = 0  
-
-
+# Função para calcular o checksum de uma string
 def checksum(data):
     return sum(bytearray(data, 'utf-8')) % 256
 
-def send_packet(data, introduce_error=False):
+
+# Função assíncrona para enviar pacotes
+async def send_packet(data, protocol, error_type=None):
     global seq_num
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(ADDR)
     packet_checksum = checksum(data)
 
-    if introduce_error:
-        packet_checksum += 1  
+    # Introduz erro de acordo com a escolha do usuário
+    if error_type == "integrity":
+        packet_checksum += 1  # Introduz erro de integridade no checksum
+    elif error_type == "timeout":
+        time.sleep(5)  # Simula um atraso, causando um erro de timeout
 
-    packet = f"{seq_num}|{data}|{packet_checksum}"
+    # Adiciona o protocolo ao pacote
+    packet = f"{protocol}|{seq_num}|{data}|{packet_checksum}"
     message = packet.encode(FORMAT)
-    #msg_length = len(message)
-    #send_length = str(msg_length).encode(FORMAT)
-    #print(f'tamanho: {send_length}')
-    #send_length += b' ' * (HEADER - len(send_length))
 
-    #client.send(send_length)
     client.send(message)
-    print(f"[CLIENT] Pacote {seq_num} enviado: {data}")
+    print(f"[CLIENT] Pacote {seq_num} enviado usando {protocol}: {data}")
 
     try:
         response = client.recv(2048).decode(FORMAT)
         if response.startswith("ACK"):
             print(f"[SERVER] ACK recebido para pacote {seq_num}")
-            seq_num += 1  
+            ack_received.add(seq_num)  # Adiciona o ACK ao conjunto
+            seq_num += 1  # Incrementa o número de sequência
+
+            # Aumenta a janela de congestionamento (caminho de controle de congestionamento)
+            global congestion_window
+            if congestion_window < max_cwnd:
+                congestion_window += 1
+
         elif response.startswith("NAK"):
             print(f"[SERVER] NAK recebido para pacote {seq_num}. Reenviando...")
-            send_packet(data)  
+            await send_packet(data, protocol, error_type)  # Reenvia o pacote
     except socket.timeout:
         print(f"[CLIENT] Tempo de espera excedido para pacote {seq_num}. Reenviando...")
-        send_packet(data)  
+        await send_packet(data, protocol, error_type)  # Reenvia em caso de timeout
 
-def send_batch(data_list):
-    for data in data_list:
-        introduce_error = random.choice([True, False])  
-        send_packet(data, introduce_error=introduce_error)
-        time.sleep(0.5)  
-    
+    client.close()
 
+
+# Função assíncrona para enviar pacotes em lote, respeitando a janela de congestionamento
+async def send_batch(data_list, protocol, error_type=None):
+    tasks = []
+    global congestion_window
+
+    for i, data in enumerate(data_list):
+        if i < congestion_window:  # Respeita a janela de congestionamento
+            tasks.append(send_packet(data, protocol, error_type=error_type))
+        else:
+            break  # Não envia mais pacotes do que a janela permite
+
+    # Executa todas as tarefas de envio em paralelo
+    await asyncio.gather(*tasks)
+
+
+# Função principal do cliente
 def menu():
+    global congestion_window, ack_received
     while True:
         print("\nMenu:")
         print("1. Enviar uma única mensagem")
         print("2. Enviar várias mensagens em lote")
-        print("3. Enviar uma mensagem com erro")
-        print("4. Sair")
+        print("3. Sair")
 
         choice = input("Escolha uma opção: ")
 
         if choice == '1':
+            protocol = input("Escolha o protocolo (GBN/SR): ").upper()
+            if protocol not in ["GBN", "SR"]:
+                print("[CLIENT] Protocolo inválido. Tente novamente.")
+                continue
+
             message = input("Digite a mensagem para enviar: ")
-            send_packet(message)
+            error_choice = input("Escolha o tipo de erro (integrity/timeout/não): ").lower()
+            asyncio.run(send_packet(message, protocol, error_type=error_choice))
         elif choice == '2':
+            protocol = input("Escolha o protocolo (GBN/SR): ").upper()
+            if protocol not in ["GBN", "SR"]:
+                print("[CLIENT] Protocolo inválido. Tente novamente.")
+                continue
+
             num_messages = int(input("Quantas mensagens deseja enviar? "))
             messages = [f"Mensagem {i+1}" for i in range(num_messages)]
-            send_batch(messages)
+            error_choice = input("Escolha o tipo de erro (integrity/timeout/não): ").lower()
+            asyncio.run(send_batch(messages, protocol, error_type=error_choice))
         elif choice == '3':
-            message = input("Digite a mensagem para enviar com erro: ")
-            send_packet(message, introduce_error=True)
-        elif choice == '4':
-            send_packet(DISCONNECT_MESSAGE)
+            asyncio.run(send_packet(DISCONNECT_MESSAGE, "GBN"))  # Desconecta usando GBN como padrão
             print("[CLIENT] Desconectando...")
-            client.close()
             break
         else:
             print("Opção inválida. Tente novamente.")
+
 
 menu()

@@ -22,35 +22,45 @@ def checksum(data):
 
 
 # Função assíncrona para enviar pacotes
-async def send_packet(data, error_type=None):
+async def send_packet(data, error_type=None, max_retries=5):
     global seq_num, congestion_window
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(ADDR)
+    retries = 0  # Contador de retransmissões
 
-    packet_checksum = checksum(data)
-    if error_type == "integrity":
-        packet_checksum += 1  # Simula erro de integridade
+    while retries < max_retries:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(ADDR)
 
-    packet = f"{seq_num}|{data}|{packet_checksum}"
-    client.send(packet.encode(FORMAT))
-    print(f"[CLIENT] Pacote {seq_num} enviado.")
+        packet_checksum = checksum(data)
+        if error_type == "integrity":
+            packet_checksum += 1  # Simula erro de integridade
 
-    try:
-        response = client.recv(2048).decode(FORMAT)
-        if response.startswith("ACK"):
-            print(f"[SERVER] ACK recebido para {seq_num}")
-            ack_received.add(seq_num)
-            seq_num += 1
-            if congestion_window < max_cwnd:
-                congestion_window += 1
-        elif response.startswith("NAK"):
-            print(f"[SERVER] NAK recebido para {seq_num}. Reenviando...")
-            await send_packet(data, error_type)  # Reenvia em caso de NAK
-    except socket.timeout:
-        print(f"[CLIENT] Timeout para {seq_num}. Reenviando...")
-        await send_packet(data, error_type)
+        packet = f"{seq_num}|{data}|{packet_checksum}"
+        client.send(packet.encode(FORMAT))
+        print(f"[CLIENT] Pacote {seq_num} enviado. Tentativa {retries + 1}/{max_retries}.")
 
-    client.close()
+        try:
+            response = client.recv(2048).decode(FORMAT)
+            if response.startswith("ACK"):
+                print(f"[SERVER] ACK recebido para {seq_num}")
+                ack_received.add(seq_num)
+                seq_num += 1
+                if congestion_window < max_cwnd:
+                    congestion_window += 1
+                break  # Sai do loop ao receber ACK
+            elif response.startswith("NAK"):
+                print(f"[SERVER] NAK recebido para {seq_num}. Reenviando...")
+                retries += 1
+                congestion_window = max(1, congestion_window // 2)  # Reduz janela
+        except socket.timeout:
+            print(f"[CLIENT] Timeout para {seq_num}. Reenviando...")
+            retries += 1
+            congestion_window = max(1, congestion_window // 2)
+
+        client.close()
+
+    if retries == max_retries:
+        print(f"[CLIENT] Falha ao enviar pacote {seq_num} após {max_retries} tentativas.")
+
 
 
 # Função para negociar protocolo

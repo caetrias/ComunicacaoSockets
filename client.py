@@ -92,9 +92,11 @@ def menu():
         elif choice == '2':
             num_messages = int(input("Quantas mensagens deseja enviar? "))
             messages = [f"Mensagem {i+1}" for i in range(num_messages)]
-            error_choice = input("Escolha o tipo de erro (integrity/timeout/não): ").lower()
-            tasks = [send_packet(msg, error_type=error_choice) for msg in messages[:congestion_window]]
+            error_choice = input("Escolha o tipo de erro (integrity/timeout/nao): ").lower()
+        
+            tasks = [send_packet(msg, error_choice) for msg in messages]
             asyncio.run(asyncio.gather(*tasks))
+
         elif choice == '3':
             asyncio.run(send_packet(DISCONNECT_MESSAGE))
             print("[CLIENT] Desconectando...")

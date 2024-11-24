@@ -31,6 +31,8 @@ def handle_client(conn, addr):
         while connected:
             msg = conn.recv(2048).decode(FORMAT)
             if not msg:
+                print(f"[SERVER] Cliente {addr} fechou a conexão.")
+                connected = False
                 continue
 
             if msg.startswith("PROTOCOL"):
@@ -39,9 +41,24 @@ def handle_client(conn, addr):
                 conn.send(protocol.encode(FORMAT))
                 continue
 
-            seq_num, data, received_checksum = msg.split("|")
+            parts = msg.split("|")
+            if len(parts) == 4:
+                seq_num, data, received_checksum, error_type = parts
+            elif len(parts) == 3:
+                seq_num, data, received_checksum = parts
+                error_type = None
+            else:
+                print("[SERVER] Formato de pacote inválido.")
+                continue
+            
+            print(f"[SERVER] Mensagem recebida: {data}")
+
             seq_num = int(seq_num)
             received_checksum = int(received_checksum)
+
+            if error_type == "timeout":
+                print(f"[SERVER] Simulando timeout para pacote {seq_num}. Não enviando ACK ou NAK.")
+                continue  # Não envia nada para simular timeout
 
             if seq_num in lost_packets:
                 print(f"[SERVER] Pacote {seq_num} perdido (simulado).")
@@ -62,6 +79,8 @@ def handle_client(conn, addr):
     finally:
         conn.close()
         print(f"[SERVER] Conexão com {addr} encerrada.")
+
+
 
 
 

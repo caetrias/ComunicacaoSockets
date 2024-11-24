@@ -22,13 +22,14 @@ def checksum(data):
 
 # Função para manipular pacotes recebidos
 def handle_client(conn, addr):
-    print("\n")
+    print()
     global protocol, receiver_window
     print(f"[NEW CONNECTION] {addr} conectado.")
 
     connected = True
     try:
         while connected:
+            print()
             msg = conn.recv(2048).decode(FORMAT)
             if not msg:
                 print(f"[SERVER] Cliente {addr} fechou a conexão.")

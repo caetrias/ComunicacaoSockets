@@ -35,56 +35,60 @@ def handle_client(conn, addr):
                 connected = False
                 continue
 
+            # Negociação de protocolo
             if msg.startswith("PROTOCOL"):
                 _, chosen_protocol = msg.split("|")
                 protocol = chosen_protocol
+                print(f"[SERVER] Protocolo definido: {protocol}")
                 conn.send(protocol.encode(FORMAT))
                 continue
 
             parts = msg.split("|")
-            if len(parts) == 4:
-                seq_num, data, received_checksum, error_type = parts
-            elif len(parts) == 3:
-                seq_num, data, received_checksum = parts
-                error_type = None
-            else:
+            if len(parts) < 3:
                 print("[SERVER] Formato de pacote inválido.")
                 continue
 
-            print(f"[SERVER] Mensagem recebida: {data}")
+            seq_num, data, received_checksum = int(parts[0]), parts[1], int(parts[2])
+            error_type = parts[3] if len(parts) == 4 else None
 
-            seq_num = int(seq_num)
-            received_checksum = int(received_checksum)
+            print(f"[SERVER] Pacote {seq_num} recebido.")
 
+            # Simulação de timeout
             if error_type == "timeout":
-                print(f"[SERVER] Simulando timeout para pacote {seq_num}. Não enviando ACK ou NAK.")
-                continue  # Não envia nada para simular timeout
-
-            if seq_num in lost_packets:
-                print(f"[SERVER] Pacote {seq_num} perdido (simulado).")
+                print(f"[SERVER] Timeout simulado para pacote {seq_num}.")
                 continue
 
+            # Verifica integridade
             if checksum(data) != received_checksum:
-                print(f"[SERVER] Erro de integridade no pacote {seq_num}. Enviando NAK com erro de integridade.")
-                fake_checksum = simulate_integrity_error(f"NAK|{seq_num}")
-                conn.send(f"NAK|{seq_num}|{fake_checksum}".encode(FORMAT))
-                continue
+                print(f"[SERVER] Checksum inválido para pacote {seq_num}.")
+                conn.send(f"NAK|{seq_num}".encode(FORMAT))
+                if protocol == "GBN":
+                    print(f"[SERVER] GBN: Ignorando pacotes subsequentes após {seq_num}.")
+                    continue
+                else:
+                    continue
 
-            print(f"[SERVER] Pacote {seq_num} recebido com sucesso.")
-            fake_checksum = simulate_integrity_error(f"ACK|{seq_num}")
-            conn.send(f"ACK|{seq_num}|{fake_checksum}".encode(FORMAT))
+            print(f"[SERVER] Pacote {seq_num} aceito.")
+
+            # Envia ACK
+            conn.send(f"ACK|{seq_num}".encode(FORMAT))
+
+            # Controle de recepção no GBN (tamanho da janela)
+            if protocol == "GBN":
+                receiver_window -= 1
+                if receiver_window == 0:
+                    print("[SERVER] Janela cheia no GBN. Pausando envio.")
+                    time.sleep(1)  # Simula pausa
+                    receiver_window = 5  # Reseta a janela
 
             if data == DISCONNECT_MESSAGE:
                 connected = False
-
-            # Enviar a janela de recepção ao cliente
-            conn.send(f"RECEIVER_WINDOW|{receiver_window}".encode(FORMAT))
-
     except Exception as e:
-        print(f"[SERVER] Erro ao processar cliente {addr}: {e}")
+        print(f"[SERVER] Erro: {e}")
     finally:
         conn.close()
-        print(f"[SERVER] Conexão com {addr} encerrada.")
+        print(f"[SERVER] Conexão encerrada com {addr}.")
+
 
 # Início do servidor
 def start():

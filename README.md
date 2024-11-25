@@ -12,8 +12,8 @@
 Clone o repositório para o seu ambiente local:
 
 ```bash
-git clone https://github.com/username/repo.git
-cd projeto_cliente_servidor
+git clone [https://github.com/username/repo.git](https://github.com/caetrias/ComunicacaoSockets.git)
+cd <diretório do projeto>
 ```
 
 ### Passo 2: Executar o Servidor
@@ -21,7 +21,7 @@ cd projeto_cliente_servidor
 No terminal, execute o servidor:
 
 ```bash
-python3 servidor.py
+python3 server.py
 ```
 
 O servidor estará agora em modo de escuta aguardando conexões de clientes.
@@ -31,7 +31,7 @@ O servidor estará agora em modo de escuta aguardando conexões de clientes.
 Em outro terminal, execute o cliente:
 
 ```bash
-python3 cliente.py
+python3 client.py
 ```
 
 O cliente tentará se conectar ao servidor e começará a enviar pacotes conforme configurado.

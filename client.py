@@ -7,9 +7,9 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 SERVER = "127.0.0.1"
 ADDR = (SERVER, PORT)
 
-seq_num = 0 
+seq_num = 0  # Número de sequência do cliente
 congestion_window = 1
-max_cwnd = 10 
+max_cwnd = 10
 ack_received = set()  
 protocol = "SR"
 
@@ -28,7 +28,7 @@ async def negotiate_protocol(writer, reader):
 # Função para enviar pacotes
 async def send_packet(writer, reader, data, error_type=None, max_retries=5):
     global seq_num, congestion_window
-    retries = 0 
+    retries = 0
 
     while retries < max_retries:
         try:
@@ -54,7 +54,7 @@ async def send_packet(writer, reader, data, error_type=None, max_retries=5):
                     seq_num += 1
                     if congestion_window < max_cwnd:
                         congestion_window += 1
-                    break 
+                    break
                 elif response.startswith("NAK"):
                     print(f"[SERVER] NAK recebido para {seq_num}. Reenviando...")
                     retries += 1

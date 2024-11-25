@@ -74,8 +74,24 @@ async def send_packet(writer, reader, data, error_type=None, max_retries=5):
 
 # Menu principal
 async def menu(writer, reader):
-    global protocol, congestion_window, seq_num
+    global protocol
+
+    # Escolha de protocolo
+    print("\nEscolha o protocolo:")
+    print("1. Selective Repeat (SR)")
+    print("2. Go-Back-N (GBN)")
+    choice = input("Digite o número do protocolo: ")
+
+    if choice == '1':
+        protocol = "SR"
+    elif choice == '2':
+        protocol = "GBN"
+    else:
+        print("Opção inválida. Padrão para SR.")
+        protocol = "SR"
+
     await negotiate_protocol(writer, reader)
+
     while True:
         print("\nMenu:")
         print("1. Enviar uma única mensagem")

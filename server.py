@@ -1,6 +1,7 @@
 import socket  # Importa a biblioteca socket para comunicação de rede
 import threading  # Importa a biblioteca threading para execução em múltiplas threads
 from concurrent.futures import ThreadPoolExecutor  # Importa ThreadPoolExecutor para gerenciar o pool de threads
+import time 
 
 # Constantes de configuração
 HEADER = 64  # Tamanho do cabeçalho

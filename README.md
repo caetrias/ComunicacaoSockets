@@ -12,7 +12,7 @@
 Clone o repositório para o seu ambiente local:
 
 ```bash
-git clone [https://github.com/username/repo.git](https://github.com/caetrias/ComunicacaoSockets.git)
+git clone https://github.com/caetrias/ComunicacaoSockets.git
 cd <diretório do projeto>
 ```
 
